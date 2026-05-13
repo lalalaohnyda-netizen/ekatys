@@ -21,19 +21,20 @@ public abstract class RotationMixin {
             visualYaw = Killaura.mc.player.yaw;
             visualPitch = Killaura.mc.player.pitch;
 
-            // Ставим углы из киллауры для пакетов
+            // Ставим читерские углы для пакетов
             Killaura.mc.player.yaw = Killaura.rotYaw;
             Killaura.mc.player.pitch = Killaura.rotPitch;
             
-            Killaura.mc.player.rotationYawHead = Killaura.rotYaw;
-            Killaura.mc.player.renderYawOffset = Killaura.rotYaw;
+            // Чтобы другие игроки видели поворот головы и тела
+            Killaura.mc.player.headYaw = Killaura.rotYaw;
+            Killaura.mc.player.bodyYaw = Killaura.rotYaw;
         }
     }
 
     @Inject(method = "sendMovementPackets", at = @At("RETURN"))
     private void compensateAfter(CallbackInfo ci) {
         if (Killaura.isRotating && Killaura.mc.player != null) {
-            // Возвращаем визуальный вид игроку
+            // Возвращаем тебе нормальный обзор
             Killaura.mc.player.yaw = visualYaw;
             Killaura.mc.player.pitch = visualPitch;
         }

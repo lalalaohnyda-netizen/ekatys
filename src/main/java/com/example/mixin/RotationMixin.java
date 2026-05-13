@@ -12,13 +12,7 @@ public abstract class RotationMixin {
 
     @Inject(method = "sendMovementPackets", at = @At("HEAD"))
     private void onSendMovementPackets(CallbackInfo ci) {
+        // Просто запускаем логику киллауры. Подмена пакетов пойдет из самого класса Killaura.
         Killaura.onTick();
-    }
-
-    @Inject(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isCameraVar()Z"), cancellable = true)
-    private void silentRotationManual(CallbackInfo ci) {
-        // Это заставит сервер получать углы из Killaura.serverYaw/Pitch 
-        // Если ты используешь метод с подменой yaw внутри Killaura (как выше),
-        // то этот миксин просто вызывает тик.
     }
 }

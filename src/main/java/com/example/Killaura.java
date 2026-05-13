@@ -2,76 +2,77 @@ package com.example;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Hand;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.vector.Vector2f;
 
 public class Killaura {
-    public static boolean enabled = true;
     public static MinecraftClient mc = MinecraftClient.getInstance();
-    
-    public static Entity targetEntity = null;
-    public static float serverYaw, serverPitch;
+    public static LivingEntity target;
+    public static Vector2f rotateVector = new Vector2f(0, 0);
     public static boolean isRotating = false;
 
+    // Скорость поворота (можно менять)
+    private static final float speed = 15.0F; 
+
     public static void onTick() {
-        if (!enabled || mc.player == null || mc.world == null) {
-            targetEntity = null;
-            isRotating = false;
-            return;
-        }
+        if (mc.player == null || mc.world == null) return;
 
-        if (targetEntity != null && (!targetEntity.isAlive() || mc.player.distanceTo(targetEntity) > 4.5)) {
-            targetEntity = null;
-        }
+        target = findTarget();
 
-        if (targetEntity == null) {
-            targetEntity = findBestTarget();
-        }
-
-        if (targetEntity != null) {
-            updateRotation(targetEntity);
+        if (target != null) {
+            updateRotation();
             isRotating = true;
-
-            // 1 удар, строго крит, строго по КД
-            if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
-                if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
-                    mc.interactionManager.attackEntity(mc.player, targetEntity);
-                    mc.player.swingHand(Hand.MAIN_HAND);
-                }
+            
+            // Механика удара (Криты)
+            if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f && mc.player.fallDistance > 0) {
+                mc.interactionManager.attackEntity(mc.player, target);
+                mc.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
             }
         } else {
             isRotating = false;
+            // Плавно возвращаем вектор к обычному взгляду, чтобы не было рывка при включении
+            rotateVector = new Vector2f(mc.player.yaw, mc.player.pitch);
         }
     }
 
-    private static Entity findBestTarget() {
-        Entity best = null;
-        double dist = 4.2;
-        for (Entity e : mc.world.getEntities()) {
-            if (e instanceof PlayerEntity && e != mc.player && e.isAlive()) {
-                double d = mc.player.distanceTo(e);
-                if (d < dist) { dist = d; best = e; }
-            }
-        }
-        return best;
-    }
-
-    private static void updateRotation(Entity target) {
+    private static void updateRotation() {
+        // Расчет углов на центр хитбокса (как в скрипте)
         double diffX = target.getX() - mc.player.getX();
-        double diffY = (target.getY() + target.getHeight() / 2.0) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        double diffY = (target.getY() + target.getHeight() * 0.5) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffZ = target.getZ() - mc.player.getZ();
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
         float targetYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
         float targetPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        // Плавная доводка
-        serverYaw = interpolate(serverYaw, targetYaw, 0.25f);
-        serverPitch = interpolate(serverPitch, targetPitch, 0.25f);
+        float yawDelta = MathHelper.wrapDegrees(targetYaw - rotateVector.x);
+        float pitchDelta = MathHelper.wrapDegrees(targetPitch - rotateVector.y);
+
+        // Плавность (Clamping)
+        float clampedYaw = Math.min(Math.max(Math.abs(yawDelta), 1.0F), speed);
+        float clampedPitch = Math.min(Math.max(Math.abs(pitchDelta), 1.0F), speed);
+
+        float newYaw = rotateVector.x + (yawDelta > 0 ? clampedYaw : -clampedYaw);
+        float newPitch = MathHelper.clamp(rotateVector.y + (pitchDelta > 0 ? clampedPitch : -clampedPitch), -90, 90);
+
+        // Настройка чувствительности (GCD Fix), чтобы не палил античит
+        float f = (float) (mc.options.mouseSensitivity * 0.6F + 0.2F);
+        float gcd = f * f * f * 1.2F;
+        
+        newYaw -= (newYaw - rotateVector.x) % gcd;
+        newPitch -= (newPitch - rotateVector.y) % gcd;
+
+        rotateVector = new Vector2f(newYaw, newPitch);
     }
 
-    private static float interpolate(float current, float target, float speed) {
-        float diff = ((target - current + 180) % 360) - 180;
-        return current + diff * speed;
+    private static LivingEntity findTarget() {
+        for (Entity e : mc.world.getEntities()) {
+            if (e instanceof PlayerEntity && e != mc.player && e.isAlive() && mc.player.distanceTo(e) < 4.5) {
+                return (LivingEntity) e;
+            }
+        }
+        return null;
     }
 }

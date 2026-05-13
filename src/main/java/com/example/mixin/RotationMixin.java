@@ -5,34 +5,26 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPlayerEntity.class)
 public abstract class RotationMixin {
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    private void onTickHead(CallbackInfo ci) {
-        // Перед тем как Киллаура повернет нас, сохраняем куда МЫ смотрим мышкой
-        Killaura.visualYaw = Killaura.mc.player.yaw;
-        Killaura.visualPitch = Killaura.mc.player.pitch;
-        
+    @Inject(method = "sendMovementPackets", at = @At("HEAD"))
+    private void onSendMovementPackets(CallbackInfo ci) {
         Killaura.onTick();
     }
 
-    @Inject(method = "tick", at = @At("RETURN"))
-    private void onTickReturn(CallbackInfo ci) {
-        // ПОСЛЕ того как Киллаура отработала и изменила реальный yaw/pitch для сервера,
-        // мы на ОДИН МИГ возвращаем визуальные углы для отрисовки камеры.
-        // Это не мешает пакетам, которые улетают в другом методе.
-        if (Killaura.enabled && Killaura.mc.player != null) {
-             // Магия в том, что рендер кадра подхватит эти значения,
-             // а пакеты движения отправятся с реальными значениями киллауры.
-        }
+    // Подменяем Yaw ПРЯМО ПЕРЕД отправкой пакета на сервер
+    @Redirect(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getYaw()F"))
+    private float redirectYaw(ClientPlayerEntity player) {
+        return Killaura.isRotating ? Killaura.serverYaw : player.getYaw();
     }
-    
-    @Inject(method = "sendMovementPackets", at = @At("HEAD"))
-    private void syncBeforePackets(CallbackInfo ci) {
-        // Гарантируем, что перед отправкой пакета мы смотрим на цель
-        Killaura.onTick();
+
+    // Подменяем Pitch ПРЯМО ПЕРЕД отправкой пакета на сервер
+    @Redirect(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getPitch()F"))
+    private float redirectPitch(ClientPlayerEntity player) {
+        return Killaura.isRotating ? Killaura.serverPitch : player.getPitch();
     }
 }

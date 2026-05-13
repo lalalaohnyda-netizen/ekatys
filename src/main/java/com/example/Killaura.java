@@ -5,44 +5,57 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 
 public class Killaura {
     public static boolean enabled = false;
     private static MinecraftClient mc = MinecraftClient.getInstance();
+    
+    // Храним углы для сервера
+    public static float serverYaw;
+    public static float serverPitch;
+    public static boolean isRotating = false;
 
     public static void onTick() {
-        if (!enabled || mc.player == null || mc.world == null) return;
+        if (!enabled || mc.player == null || mc.world == null) {
+            isRotating = false;
+            return;
+        }
 
-        // Ищем ближайшую цель (игрока) в радиусе 4 блоков
         Entity target = null;
-        double shortestDistance = 4.0;
+        double dist = 4.0;
 
         for (Entity entity : mc.world.getEntities()) {
             if (entity instanceof PlayerEntity && entity != mc.player && entity.isAlive()) {
-                double dist = mc.player.distanceTo(entity);
-                if (dist < shortestDistance) {
-                    shortestDistance = dist;
+                double d = mc.player.distanceTo(entity);
+                if (d < dist) {
+                    dist = d;
                     target = entity;
                 }
             }
         }
 
         if (target != null) {
-            // 1. ЖЕСТКАЯ НАВОДКА (ты будешь видеть, как голова крутится за целью)
-            lookAtEntity(target);
+            // Считаем углы Silent наводки
+            calculateSilentRotation(target);
+            isRotating = true;
 
-            // 2. ЛОГИКА КРИТОВ (Auto-Crit)
-            // Бьем только если мы падаем (fallDistance > 0) или не на земле, чтобы прошел крит
-            if (mc.player.fallDistance > 0.0f || !mc.player.isOnGround()) {
-                if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) { // Ждем отката удара
+            // AUTO-CRIT логика: бьем только в падении
+            if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
+                if (mc.player.getAttackCooldownProgress(0.5f) >= 0.9f) {
+                    // Перед ударом сервер должен думать, что мы смотрим на цель
+                    mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(serverYaw, serverPitch, mc.player.isOnGround()));
+                    
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
             }
+        } else {
+            isRotating = false;
         }
     }
 
-    private static void lookAtEntity(Entity entity) {
+    private static void calculateSilentRotation(Entity entity) {
         Vec3d targetPos = entity.getEyePos();
         Vec3d playerPos = mc.player.getEyePos();
         
@@ -51,11 +64,7 @@ public class Killaura {
         double diffZ = targetPos.z - playerPos.z;
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
-        float yaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
-        float pitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
-
-        // Устанавливаем углы поворота самому игроку (будет видно всем и тебе)
-        mc.player.setYaw(yaw);
-        mc.player.setPitch(pitch);
+        serverYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
+        serverPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
     }
 }

@@ -1,10 +1,10 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '0.10-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.7-SNAPSHOT' 
     id 'maven-publish'
 }
 
-sourceCompatibility = JavaVersion.VERSION_16
-targetCompatibility = JavaVersion.VERSION_16
+sourceCompatibility = JavaVersion.VERSION_17 // Gradle 9 требует минимум 17 для себя
+targetCompatibility = JavaVersion.VERSION_17
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version
@@ -12,15 +12,14 @@ group = project.maven_group
 
 repositories {
     maven { url "https://maven.fabricmc.net/" }
-    maven { url "https://libraries.minecraft.net/" }
     mavenCentral()
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    minecraft "com.mojang:minecraft:1.16.5"
+    mappings "net.fabricmc:yarn:1.16.5+build.1:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc:fabric-api:fabric-api:${project.fabric_api_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
@@ -30,11 +29,7 @@ processResources {
     }
 }
 
+// Это чтобы майнкрафт 1.16.5 не офигел от новой явы
 tasks.withType(JavaCompile).configureEach {
-    it.options.encoding = "UTF-8"
-    it.options.release = 16
-}
-
-java {
-    withSourcesJar()
+    it.options.release = 16 
 }

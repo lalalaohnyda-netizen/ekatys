@@ -7,33 +7,28 @@ import net.minecraft.util.Hand;
 
 public class Killaura {
     public static boolean enabled = true;
-    private static MinecraftClient mc = MinecraftClient.getInstance();
+    public static MinecraftClient mc = MinecraftClient.getInstance();
     
-    public static float serverYaw;
-    public static float serverPitch;
-    public static boolean isRotating = false;
+    // Храним твои визуальные углы, чтобы камера не дергалась
+    public static float visualYaw;
+    public static float visualPitch;
 
     public static void onTick() {
-        if (!enabled || mc.player == null || mc.world == null) {
-            isRotating = false;
-            return;
-        }
+        if (!enabled || mc.player == null || mc.world == null) return;
 
         Entity target = findTarget();
 
         if (target != null) {
-            calculateSilentRotation(target);
-            isRotating = true;
+            // Реально поворачиваем игрока на цель (центр хитбокса)
+            lookAtCenter(target);
 
-            // ОДИН четкий удар по кулдауну в момент падения
+            // Один четкий удар в падении
             if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
-                if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
+                if (mc.player.fallDistance > 0.05f || !mc.player.isOnGround()) {
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
             }
-        } else {
-            isRotating = false;
         }
     }
 
@@ -46,13 +41,17 @@ public class Killaura {
         return null;
     }
 
-    private static void calculateSilentRotation(Entity target) {
+    private static void lookAtCenter(Entity target) {
         double diffX = target.getX() - mc.player.getX();
-        double diffY = (target.getY() + target.getEyeHeight(target.getPose()) * 0.8) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        double diffY = (target.getY() + target.getHeight() / 2.0) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffZ = target.getZ() - mc.player.getZ();
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
-        serverYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
-        serverPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
+        float yaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
+        float pitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
+
+        // Устанавливаем РЕАЛЬНЫЕ углы (их увидит сервер)
+        mc.player.yaw = yaw;
+        mc.player.pitch = pitch;
     }
 }

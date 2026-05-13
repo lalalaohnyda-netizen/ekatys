@@ -9,23 +9,21 @@ public class Killaura {
     public static boolean enabled = true;
     public static MinecraftClient mc = MinecraftClient.getInstance();
     
-    public static Entity targetEntity = null; // Фиксация цели
+    public static Entity targetEntity = null;
     public static float serverYaw, serverPitch;
     public static boolean isRotating = false;
 
     public static void onTick() {
-        if (!enabled || mc.player == null) {
+        if (!enabled || mc.player == null || mc.world == null) {
             targetEntity = null;
             isRotating = false;
             return;
         }
 
-        // Если цель ушла далеко или умерла — сбрасываем
         if (targetEntity != null && (!targetEntity.isAlive() || mc.player.distanceTo(targetEntity) > 4.5)) {
             targetEntity = null;
         }
 
-        // Ищем новую, только если старой нет
         if (targetEntity == null) {
             targetEntity = findBestTarget();
         }
@@ -34,7 +32,7 @@ public class Killaura {
             updateRotation(targetEntity);
             isRotating = true;
 
-            // Удар: 1 раз, строго в падении, при полной зарядке
+            // 1 удар, строго крит, строго по КД
             if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
                 if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
                     mc.interactionManager.attackEntity(mc.player, targetEntity);
@@ -67,9 +65,9 @@ public class Killaura {
         float targetYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
         float targetPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        // Ультра-плавность (Lerp). 0.2f - скорость доводки.
-        serverYaw = interpolate(serverYaw, targetYaw, 0.2f);
-        serverPitch = interpolate(serverPitch, targetPitch, 0.2f);
+        // Плавная доводка
+        serverYaw = interpolate(serverYaw, targetYaw, 0.25f);
+        serverPitch = interpolate(serverPitch, targetPitch, 0.25f);
     }
 
     private static float interpolate(float current, float target, float speed) {

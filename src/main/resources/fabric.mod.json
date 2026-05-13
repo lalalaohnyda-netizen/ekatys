@@ -4,18 +4,27 @@
   "version": "1.0.0",
   "name": "Ekatys Mod",
   "description": "My Fabric Mod",
-  "authors": [ "YourName" ],
-  "contact": { "sources": "https://github.com/your/repo" },
+  "authors": [
+    "YourName"
+  ],
+  "contact": {
+    "sources": "https://github.com/your/repo"
+  },
   "license": "MIT",
   "icon": "assets/ekatys/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": [ "com.example.ExampleMod" ]
+    "main": [
+      "com.example.ExampleMod"
+    ]
   },
-  "mixins": [ "ekatys.mixins.json" ],
-    "depends": {
+  "mixins": [
+    "ekatys.mixins.json"
+  ],
+  "depends": {
     "fabricloader": ">=0.11.3",
     "fabric": "*",
     "minecraft": "1.16.5",
-    "java": ">=8" 
+    "java": ">=8"
   }
+}

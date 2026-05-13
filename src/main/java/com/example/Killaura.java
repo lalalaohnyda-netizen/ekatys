@@ -3,53 +3,59 @@ package com.example;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.Vec3d;
 
 public class Killaura {
     public static boolean enabled = false;
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static MinecraftClient mc = MinecraftClient.getInstance();
 
     public static void onTick() {
         if (!enabled || mc.player == null || mc.world == null) return;
 
-        // Ищем цель в радиусе 3.5 блока
+        // Ищем ближайшую цель (игрока) в радиусе 4 блоков
         Entity target = null;
+        double shortestDistance = 4.0;
+
         for (Entity entity : mc.world.getEntities()) {
             if (entity instanceof PlayerEntity && entity != mc.player && entity.isAlive()) {
-                if (mc.player.distanceTo(entity) <= 3.5f) {
+                double dist = mc.player.distanceTo(entity);
+                if (dist < shortestDistance) {
+                    shortestDistance = dist;
                     target = entity;
-                    break;
                 }
             }
         }
 
         if (target != null) {
-            // Считаем ротации
-            float[] rots = getRotations(target);
+            // 1. ЖЕСТКАЯ НАВОДКА (ты будешь видеть, как голова крутится за целью)
+            lookAtEntity(target);
 
-            // SILENT ROTATION: отправляем пакет поворота серверу
-            // Благодаря этому сервер и другие игроки видят, что ты повернут, а у тебя камера не дергается
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(
-                    rots[0], rots[1], mc.player.isOnGround()
-            ));
-
-            // Бьем, если КД прошел
-            if (mc.player.getAttackCooldownProgress(0) >= 1) {
-                mc.interactionManager.attackEntity(mc.player, target);
-                mc.player.swingHand(Hand.MAIN_HAND);
+            // 2. ЛОГИКА КРИТОВ (Auto-Crit)
+            // Бьем только если мы падаем (fallDistance > 0) или не на земле, чтобы прошел крит
+            if (mc.player.fallDistance > 0.0f || !mc.player.isOnGround()) {
+                if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) { // Ждем отката удара
+                    mc.interactionManager.attackEntity(mc.player, target);
+                    mc.player.swingHand(Hand.MAIN_HAND);
+                }
             }
         }
     }
 
-    public static float[] getRotations(Entity e) {
-        double dX = e.getX() - mc.player.getX();
-        double dY = e.getEyeY() - (mc.player.getY() + mc.player.getStandingEyeHeight());
-        double dZ = e.getZ() - mc.player.getZ();
-        double dist = Math.sqrt(dX * dX + dZ * dZ);
-        float yaw = (float) (Math.atan2(dZ, dX) * 180 / Math.PI) - 90;
-        float pitch = (float) -(Math.atan2(dY, dist) * 180 / Math.PI);
-        return new float[]{yaw, pitch};
+    private static void lookAtEntity(Entity entity) {
+        Vec3d targetPos = entity.getEyePos();
+        Vec3d playerPos = mc.player.getEyePos();
+        
+        double diffX = targetPos.x - playerPos.x;
+        double diffY = targetPos.y - playerPos.y;
+        double diffZ = targetPos.z - playerPos.z;
+        double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
+
+        float yaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
+        float pitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
+
+        // Устанавливаем углы поворота самому игроку (будет видно всем и тебе)
+        mc.player.setYaw(yaw);
+        mc.player.setPitch(pitch);
     }
 }
-

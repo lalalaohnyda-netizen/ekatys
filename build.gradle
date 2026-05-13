@@ -1,16 +1,16 @@
 buildscript {
     repositories {
         maven { url "https://maven.fabricmc.net/" }
+        maven { url "https://jitpack.io" }
         mavenCentral()
     }
     dependencies {
-        // Используем 0.10.73, так как она стабильнее снапшотов
-        classpath "net.fabricmc:fabric-loom:0.10.73"
+        // Пробуем версию чуть ниже, она часто более "цепучая" для Gradle
+        classpath "net.fabricmc:fabric-loom:0.10.72"
     }
 }
 
-// Пробуем альтернативный ID плагина, который точно есть в 0.10.73
-apply plugin: "fabric-loom" 
+apply plugin: "fabric-loom"
 apply plugin: "maven-publish"
 
 sourceCompatibility = JavaVersion.VERSION_17
@@ -22,6 +22,7 @@ group = "com.example"
 
 repositories {
     maven { url "https://maven.fabricmc.net/" }
+    maven { url "https://jitpack.io" }
     mavenCentral()
 }
 
@@ -32,12 +33,6 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.36.0+1.16.5"
 }
 
-// Это чтобы майнкрафт 1.16.5 понимал скомпиленный код
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 16
-}
-
-// Настройка миксинов (чтобы не ругалось при сборке)
-loom {
-    accessWidenerPath = null // Если у тебя нет access widener
 }

@@ -1,5 +1,6 @@
-package net.fabricmc.example;
+package com.example;
 
+import com.example.Killaura; 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;

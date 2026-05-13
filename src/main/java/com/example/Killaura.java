@@ -42,7 +42,7 @@ public class Killaura {
         }
     }
 
-    private static float[] getRotations(Entity e) {
+    public static float[] getRotations(Entity e) {
         double dX = e.getX() - mc.player.getX();
         double dY = e.getEyeY() - (mc.player.getY() + mc.player.getStandingEyeHeight());
         double dZ = e.getZ() - mc.player.getZ();

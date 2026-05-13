@@ -2,6 +2,7 @@ package com.example;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.options.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,29 +16,24 @@ public class Killaura {
     
     public static float rotYaw, rotPitch;
     public static boolean isRotating = false;
-
-    // Параметры для "плавания" прицела
     private static float animTicks = 0;
 
     public static void onTick() {
-        if (!enabled || mc.player == null || mc.world == null) {
-            isRotating = false;
-            return;
+        if (!enabled || mc.player == null) return;
+
+        // --- ЖЕЛЕЗНЫЙ INVENTORY WALK ---
+        if (mc.currentScreen != null && !(mc.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen)) {
+            // Опрашиваем состояние клавиш напрямую через окно (LWJGL)
+            long window = mc.getWindow().getHandle();
+            mc.options.keyForward.setPressed(net.minecraft.client.util.InputUtil.isKeyPressed(window, mc.options.keyForward.getDefaultKey().getCode()));
+            mc.options.keyBack.setPressed(net.minecraft.client.util.InputUtil.isKeyPressed(window, mc.options.keyBack.getDefaultKey().getCode()));
+            mc.options.keyLeft.setPressed(net.minecraft.client.util.InputUtil.isKeyPressed(window, mc.options.keyLeft.getDefaultKey().getCode()));
+            mc.options.keyRight.setPressed(net.minecraft.client.util.InputUtil.isKeyPressed(window, mc.options.keyRight.getDefaultKey().getCode()));
+            mc.options.keyJump.setPressed(net.minecraft.client.util.InputUtil.isKeyPressed(window, mc.options.keyJump.getDefaultKey().getCode()));
         }
 
-        // --- INVENTORY WALK (Ходьба в инвентаре) ---
-        if (mc.currentScreen instanceof InventoryScreen) {
-            // Разрешаем управление кнопками движения, пока открыт инвентарь
-            mc.options.keyForward.setPressed(mc.options.keyForward.isPressed());
-            mc.options.keyBack.setPressed(mc.options.keyBack.isPressed());
-            mc.options.keyLeft.setPressed(mc.options.keyLeft.isPressed());
-            mc.options.keyRight.setPressed(mc.options.keyRight.isPressed());
-            mc.options.keyJump.setPressed(mc.options.keyJump.isPressed());
-            mc.options.keySprint.setPressed(true); // Автобег в инвентаре
-        }
-
-        // --- AUTO SPRINT ---
-        if (mc.player.forwardSpeed > 0 && !mc.player.isSneaking()) {
+        // --- АВТОСПРИНТ (Вместо зажима CTRL) ---
+        if (mc.player.forwardSpeed > 0 && !mc.player.isSneaking() && !mc.player.horizontalCollision) {
             mc.player.setSprinting(true);
         }
 
@@ -47,66 +43,63 @@ public class Killaura {
             updateRotation();
             isRotating = true;
             
-            // Удар (Криты)
-            if (mc.player.getAttackCooldownProgress(0.5f) >= 0.92f) {
-                if (mc.player.fallDistance > 0.05f || mc.player.abilities.creativeMode) {
+            // Чтобы не флагало: бьем только когда прицел УЖЕ наведен (погрешность < 5 градусов)
+            float yawDiff = Math.abs(MathHelper.wrapDegrees(rotYaw - mc.player.yaw));
+            
+            if (mc.player.getAttackCooldownProgress(0.0f) >= 0.98f) {
+                // Если ты в прыжке или падаешь — крит
+                if (mc.player.fallDistance > 0 || mc.player.abilities.creativeMode) {
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
             }
         } else {
             isRotating = false;
-            animTicks = 0;
             rotYaw = mc.player.yaw;
             rotPitch = mc.player.pitch;
         }
     }
 
     private static void updateRotation() {
-        animTicks += 0.5f; // Скорость "плавания"
+        animTicks += 0.8f;
 
-        // Базовые углы на цель
         double diffX = target.getX() - mc.player.getX();
         double diffZ = target.getZ() - mc.player.getZ();
-        // Наводимся в район груди
-        double diffY = (target.getY() + target.getHeight() * 0.55) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        // Точка наводки плавает от живота до груди
+        double diffY = (target.getY() + target.getHeight() * (0.45 + Math.sin(animTicks * 0.2) * 0.1)) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
         float targetYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
         float targetPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        // --- ЛОГИКА ПЛАВАНИЯ (Bypass) ---
-        // Создаем восьмерку или эллипс внутри хитбокса с помощью sin и cos
-        float swimYaw = (float) Math.sin(animTicks * 0.4) * 1.5f; 
-        float swimPitch = (float) Math.cos(animTicks * 0.3) * 1.2f;
-
-        targetYaw += swimYaw;
-        targetPitch += swimPitch;
+        // Рандомизация траектории (чтобы не было "линейки")
+        targetYaw += Math.sin(animTicks * 0.15) * 1.8f;
+        targetPitch += Math.cos(animTicks * 0.1) * 1.5f;
 
         float yawDelta = MathHelper.wrapDegrees(targetYaw - rotYaw);
         float pitchDelta = MathHelper.wrapDegrees(targetPitch - rotPitch);
 
-        // Плавная доводка
-        float speed = 16.0f + (float)Math.sin(animTicks) * 2.0f; 
-        float clampedYaw = Math.min(Math.max(Math.abs(yawDelta), 1.0F), speed);
-        float clampedPitch = Math.min(Math.max(Math.abs(pitchDelta), 1.0F), speed);
+        // Динамическая скорость: чем ближе к цели, тем медленнее (имитация доводки рукой)
+        float distFactor = Math.min(1.0f, (Math.abs(yawDelta) + Math.abs(pitchDelta)) / 30f);
+        float currentSpeed = 12.0f + (distFactor * 10.0f); 
 
-        rotYaw += (yawDelta > 0 ? clampedYaw : -clampedYaw);
-        rotPitch = MathHelper.clamp(rotPitch + (pitchDelta > 0 ? clampedPitch : -clampedPitch), -90, 90);
+        rotYaw += yawDelta * (currentSpeed / 100f);
+        rotPitch += pitchDelta * (currentSpeed / 100f);
 
-        // GCD Fix (чтобы сервер думал, что работает мышка)
+        // GCD Фикс
         float f = (float) (mc.options.mouseSensitivity * 0.6F + 0.2F);
         float gcd = f * f * f * 1.2F;
-        rotYaw -= (rotYaw - (rotYaw - yawDelta)) % gcd;
-        rotPitch -= (rotPitch - (rotPitch - pitchDelta)) % gcd;
+        rotYaw -= (rotYaw - mc.player.yaw) % gcd;
+        rotPitch -= (rotPitch - mc.player.pitch) % gcd;
     }
 
     private static LivingEntity findTarget() {
         for (Entity e : mc.world.getEntities()) {
-            if (e instanceof PlayerEntity && e != mc.player && e.isAlive() && mc.player.distanceTo(e) < 4.1) {
+            if (e instanceof PlayerEntity && e != mc.player && e.isAlive() && mc.player.distanceTo(e) < 3.8) {
                 return (LivingEntity) e;
             }
         }
         return null;
     }
 }
+

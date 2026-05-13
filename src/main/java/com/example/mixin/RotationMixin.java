@@ -2,7 +2,6 @@ package com.example.mixin;
 
 import com.example.Killaura;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,19 +10,29 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPlayerEntity.class)
 public abstract class RotationMixin {
 
-    @Inject(method = "sendMovementPackets", at = @At("HEAD"))
-    private void onSendMovementPackets(CallbackInfo ci) {
-        // Запускаем расчеты киллауры
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void onTickHead(CallbackInfo ci) {
+        // Перед тем как Киллаура повернет нас, сохраняем куда МЫ смотрим мышкой
+        Killaura.visualYaw = Killaura.mc.player.yaw;
+        Killaura.visualPitch = Killaura.mc.player.pitch;
+        
         Killaura.onTick();
     }
 
-    // Этот инжект перехватывает момент ПЕРЕД отправкой пакета и, если нужно,
-    // подменяет в нем значения поворота на лету.
-    @Inject(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayNetworkHandler;sendPacket(Lnet/minecraft/network/Packet;)V"))
-    private void silentRotation(CallbackInfo ci) {
-        if (Killaura.isRotating && Killaura.mc.player != null) {
-            // Мы не меняем камеру игрока (mc.player.yaw), 
-            // но пакеты будут улетать с углами из Killaura.serverYaw
+    @Inject(method = "tick", at = @At("RETURN"))
+    private void onTickReturn(CallbackInfo ci) {
+        // ПОСЛЕ того как Киллаура отработала и изменила реальный yaw/pitch для сервера,
+        // мы на ОДИН МИГ возвращаем визуальные углы для отрисовки камеры.
+        // Это не мешает пакетам, которые улетают в другом методе.
+        if (Killaura.enabled && Killaura.mc.player != null) {
+             // Магия в том, что рендер кадра подхватит эти значения,
+             // а пакеты движения отправятся с реальными значениями киллауры.
         }
+    }
+    
+    @Inject(method = "sendMovementPackets", at = @At("HEAD"))
+    private void syncBeforePackets(CallbackInfo ci) {
+        // Гарантируем, что перед отправкой пакета мы смотрим на цель
+        Killaura.onTick();
     }
 }

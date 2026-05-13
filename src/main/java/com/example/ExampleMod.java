@@ -1,24 +1,41 @@
-package com.example;
+package net.fabricmc.example;
 
 import net.fabricmc.api.ModInitializer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.LiteralText;
+import org.lwjgl.glfw.GLFW;
 
 public class ExampleMod implements ModInitializer {
-	public static final String MOD_ID = "modid";
 
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    private boolean rPressed = false;
 
-	@Override
-	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
+    @Override
+    public void onInitialize() {
+        // Регистрация события тика клиента
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null) return;
 
-		LOGGER.info("Hello Fabric world!");
-	}
+            // Проверка нажатия клавиши R через GLFW
+            long window = client.getWindow().getHandle();
+            boolean isKeyDown = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_R) == GLFW.GLFW_PRESS;
+
+            // Логика переключения (Toggle), чтобы не мигало 20 раз в секунду
+            if (isKeyDown && !rPressed) {
+                Killaura.enabled = !Killaura.enabled;
+                rPressed = true;
+                
+                // Вывод сообщения в чат о состоянии (как в читах)
+                String status = Killaura.enabled ? "§aEnabled" : "§cDisabled";
+                client.player.sendMessage(new LiteralText("§7[§6Killaura§7] " + status), true);
+            } else if (!isKeyDown) {
+                rPressed = false;
+            }
+
+            // Вызов самой логики ауры каждый тик
+            if (Killaura.enabled) {
+                Killaura.onTick();
+            }
+        });
+    }
 }

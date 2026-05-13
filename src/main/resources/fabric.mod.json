@@ -19,7 +19,7 @@
     ]
   },
   "mixins": [
-    "ekatys.mixins.json"
+    "ekatys.mixins.json, InputMixin, RotationMixin, VisualsMixin"
   ],
   "depends": {
     "fabricloader": ">=0.11.3",

@@ -11,7 +11,6 @@ public class Killaura {
     public static boolean enabled = false;
     private static MinecraftClient mc = MinecraftClient.getInstance();
     
-    // Храним углы для сервера
     public static float serverYaw;
     public static float serverPitch;
     public static boolean isRotating = false;
@@ -36,14 +35,13 @@ public class Killaura {
         }
 
         if (target != null) {
-            // Считаем углы Silent наводки
             calculateSilentRotation(target);
             isRotating = true;
 
-            // AUTO-CRIT логика: бьем только в падении
+            // AUTO-CRIT
             if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
                 if (mc.player.getAttackCooldownProgress(0.5f) >= 0.9f) {
-                    // Перед ударом сервер должен думать, что мы смотрим на цель
+                    // Шлем пакет поворота только на сервер
                     mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(serverYaw, serverPitch, mc.player.isOnGround()));
                     
                     mc.interactionManager.attackEntity(mc.player, target);
@@ -56,12 +54,12 @@ public class Killaura {
     }
 
     private static void calculateSilentRotation(Entity entity) {
-        Vec3d targetPos = entity.getEyePos();
-        Vec3d playerPos = mc.player.getEyePos();
+        // Исправленный расчет позиций для 1.16.5
+        double diffX = entity.getX() - mc.player.getX();
+        // Берем Y цели + высота глаз - (Y игрока + высота глаз)
+        double diffY = (entity.getY() + entity.getEyeHeight(entity.getPose())) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        double diffZ = entity.getZ() - mc.player.getZ();
         
-        double diffX = targetPos.x - playerPos.x;
-        double diffY = targetPos.y - playerPos.y;
-        double diffZ = targetPos.z - playerPos.z;
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
         serverYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;

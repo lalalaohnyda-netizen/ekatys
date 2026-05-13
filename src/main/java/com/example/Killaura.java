@@ -5,19 +5,23 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Hand;
 
 public class Killaura {
     public static MinecraftClient mc = MinecraftClient.getInstance();
     public static LivingEntity target;
+    public static boolean enabled = true; // Вернул переменную для ExampleMod
     
-    // Вместо Vector2f используем два флоата
     public static float rotYaw, rotPitch;
     public static boolean isRotating = false;
 
     private static final float speed = 15.0F; 
 
     public static void onTick() {
-        if (mc.player == null || mc.world == null) return;
+        if (!enabled || mc.player == null || mc.world == null) {
+            isRotating = false;
+            return;
+        }
 
         target = findTarget();
 
@@ -27,7 +31,7 @@ public class Killaura {
             
             if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f && mc.player.fallDistance > 0) {
                 mc.interactionManager.attackEntity(mc.player, target);
-                mc.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+                mc.player.swingHand(Hand.MAIN_HAND);
             }
         } else {
             isRotating = false;
@@ -54,7 +58,7 @@ public class Killaura {
         rotYaw += (yawDelta > 0 ? clampedYaw : -clampedYaw);
         rotPitch = MathHelper.clamp(rotPitch + (pitchDelta > 0 ? clampedPitch : -clampedPitch), -90, 90);
 
-        // GCD Фикс (Чувствительность мыши)
+        // GCD Фикс
         float f = (float) (mc.options.mouseSensitivity * 0.6F + 0.2F);
         float gcd = f * f * f * 1.2F;
         

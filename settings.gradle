@@ -5,4 +5,4 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = 'modid' // тут имя твоего проекта
+rootProject.name = 'ekatys'

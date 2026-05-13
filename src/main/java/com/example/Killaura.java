@@ -26,20 +26,25 @@ public class Killaura {
             calculateSilentRotation(target);
             isRotating = true;
 
-            // СИЛОВАЯ НАВОДКА: Шлем пакет поворота в каждом тике
-            // Сервер БУДЕТ видеть, что ты смотришь на цель, но твоя камера не шелохнется
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(
-                serverYaw, 
-                serverPitch, 
-                mc.player.isOnGround()
-            ));
-
-            // Логика удара
+            // ЖЕСТКАЯ СИНХРОНИЗАЦИЯ
             if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
                 if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
-                    // Машем рукой и бьем
+                    
+                    // Сохраняем твой реальный взгляд, чтобы экран не дернулся
+                    float realYaw = mc.player.yaw;
+                    float realPitch = mc.player.pitch;
+
+                    // На ОДИН кадр ставим серверные углы
+                    mc.player.yaw = serverYaw;
+                    mc.player.pitch = serverPitch;
+
+                    // Бьем (теперь игра думает, что ты смотришь в центр хитбокса)
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
+
+                    // Мгновенно возвращаем твой взгляд назад
+                    mc.player.yaw = realYaw;
+                    mc.player.pitch = realPitch;
                 }
             }
         } else {
@@ -50,15 +55,16 @@ public class Killaura {
     private static Entity findTarget() {
         for (Entity entity : mc.world.getEntities()) {
             if (entity instanceof PlayerEntity && entity != mc.player && entity.isAlive()) {
-                if (mc.player.distanceTo(entity) <= 4.2) return entity;
+                if (mc.player.distanceTo(entity) <= 4.0) return entity;
             }
         }
         return null;
     }
 
     private static void calculateSilentRotation(Entity target) {
+        // Наводка строго в центр хитбокса (Y + высота глаз / 1.5)
         double diffX = target.getX() - mc.player.getX();
-        double diffY = (target.getY() + target.getEyeHeight(target.getPose())) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        double diffY = (target.getY() + target.getEyeHeight(target.getPose()) / 1.5) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffZ = target.getZ() - mc.player.getZ();
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 

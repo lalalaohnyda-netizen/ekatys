@@ -1,4 +1,4 @@
-package net.fabricmc.example; // Проверь, чтобы package совпадал с ExampleMod.java
+package com.example;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;

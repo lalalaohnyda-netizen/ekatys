@@ -2,13 +2,13 @@ buildscript {
     repositories {
         maven { url "https://maven.fabricmc.net/" }
         mavenCentral()
+        mavenLocal()
     }
     dependencies {
-        classpath "net.fabricmc:fabric-loom:0.10.73"
+        classpath "net.fabricmc:fabric-loom:0.10-SNAPSHOT"
     }
 }
 
-// Применяем плагины старым способом
 apply plugin: "net.fabricmc.loom"
 apply plugin: "maven-publish"
 

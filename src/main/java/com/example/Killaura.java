@@ -4,7 +4,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Hand;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 
 public class Killaura {
     public static boolean enabled = true;
@@ -26,17 +25,9 @@ public class Killaura {
             calculateSilentRotation(target);
             isRotating = true;
 
-            // Бьем только при полном кулдауне и в прыжке (крит)
-            if (mc.player.getAttackCooldownProgress(0.5f) >= 0.9f) {
+            // ОДИН четкий удар по кулдауну в момент падения
+            if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
                 if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
-                    
-                    // Шлем пакет поворота ПРЯМО ПЕРЕД ударом
-                    // Это заставляет сервер думать, что мы смотрим на цель
-                    mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(
-                        serverYaw, serverPitch, mc.player.isOnGround()
-                    ));
-
-                    // Сам удар
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
@@ -57,7 +48,6 @@ public class Killaura {
 
     private static void calculateSilentRotation(Entity target) {
         double diffX = target.getX() - mc.player.getX();
-        // Наводка в область груди/головы (Y + высота глаз * 0.8)
         double diffY = (target.getY() + target.getEyeHeight(target.getPose()) * 0.8) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffZ = target.getZ() - mc.player.getZ();
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);

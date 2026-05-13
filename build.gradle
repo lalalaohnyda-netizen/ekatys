@@ -1,7 +1,16 @@
-plugins {
-    id 'net.fabricmc.fabric-loom' version '0.10.73'
-    id 'maven-publish'
+buildscript {
+    repositories {
+        maven { url "https://maven.fabricmc.net/" }
+        mavenCentral()
+    }
+    dependencies {
+        classpath "net.fabricmc:fabric-loom:0.10.73"
+    }
 }
+
+// Применяем плагины старым способом
+apply plugin: "net.fabricmc.loom"
+apply plugin: "maven-publish"
 
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17

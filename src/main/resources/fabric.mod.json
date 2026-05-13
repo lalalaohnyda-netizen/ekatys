@@ -13,10 +13,9 @@
     "main": [ "com.example.ExampleMod" ]
   },
   "mixins": [ "ekatys.mixins.json" ],
-  "depends": {
+    "depends": {
     "fabricloader": ">=0.11.3",
     "fabric": "*",
     "minecraft": "1.16.5",
-    "java": ">=16"
+    "java": ">=8" 
   }
-}

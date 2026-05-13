@@ -15,29 +15,25 @@ public abstract class RotationMixin {
 
     @Inject(method = "sendMovementPackets", at = @At("HEAD"))
     private void compensateBefore(CallbackInfo ci) {
-        Killaura.onTick(); // Запускаем логику киллауры
+        Killaura.onTick();
 
-        if (Killaura.isRotating) {
-            // 1. Сохраняем то, что ты видишь мышкой
+        if (Killaura.isRotating && Killaura.mc.player != null) {
             visualYaw = Killaura.mc.player.yaw;
             visualPitch = Killaura.mc.player.pitch;
 
-            // 2. В ПАКЕТЫ ПИШЕМ КИЛЛАУРУ
-            Killaura.mc.player.yaw = Killaura.rotateVector.x;
-            Killaura.mc.player.pitch = Killaura.rotateVector.y;
+            // Ставим углы из киллауры для пакетов
+            Killaura.mc.player.yaw = Killaura.rotYaw;
+            Killaura.mc.player.pitch = Killaura.rotPitch;
             
-            // Также обновляем углы головы (чтобы другие видели плавный поворот)
-            Killaura.mc.player.rotationYawHead = Killaura.rotateVector.x;
-            Killaura.mc.player.renderYawOffset = Killaura.rotateVector.x;
+            Killaura.mc.player.rotationYawHead = Killaura.rotYaw;
+            Killaura.mc.player.renderYawOffset = Killaura.rotYaw;
         }
     }
 
     @Inject(method = "sendMovementPackets", at = @At("RETURN"))
     private void compensateAfter(CallbackInfo ci) {
-        if (Killaura.isRotating) {
-            // 3. ВОЗВРАЩАЕМ ВИЗУАЛ ОБРАТНО ТЕБЕ
-            // Сразу после того как пакет улетел, ставим твои углы от мышки.
-            // Рендер кадра происходит после этого, поэтому ты не увидишь рывка.
+        if (Killaura.isRotating && Killaura.mc.player != null) {
+            // Возвращаем визуальный вид игроку
             Killaura.mc.player.yaw = visualYaw;
             Killaura.mc.player.pitch = visualPitch;
         }

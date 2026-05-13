@@ -26,25 +26,19 @@ public class Killaura {
             calculateSilentRotation(target);
             isRotating = true;
 
-            // ЖЕСТКАЯ СИНХРОНИЗАЦИЯ
-            if (mc.player.getAttackCooldownProgress(0.5f) >= 1.0f) {
+            // Бьем только при полном кулдауне и в прыжке (крит)
+            if (mc.player.getAttackCooldownProgress(0.5f) >= 0.9f) {
                 if (mc.player.fallDistance > 0.05f && !mc.player.isOnGround()) {
                     
-                    // Сохраняем твой реальный взгляд, чтобы экран не дернулся
-                    float realYaw = mc.player.yaw;
-                    float realPitch = mc.player.pitch;
+                    // Шлем пакет поворота ПРЯМО ПЕРЕД ударом
+                    // Это заставляет сервер думать, что мы смотрим на цель
+                    mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.LookOnly(
+                        serverYaw, serverPitch, mc.player.isOnGround()
+                    ));
 
-                    // На ОДИН кадр ставим серверные углы
-                    mc.player.yaw = serverYaw;
-                    mc.player.pitch = serverPitch;
-
-                    // Бьем (теперь игра думает, что ты смотришь в центр хитбокса)
+                    // Сам удар
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
-
-                    // Мгновенно возвращаем твой взгляд назад
-                    mc.player.yaw = realYaw;
-                    mc.player.pitch = realPitch;
                 }
             }
         } else {
@@ -62,9 +56,9 @@ public class Killaura {
     }
 
     private static void calculateSilentRotation(Entity target) {
-        // Наводка строго в центр хитбокса (Y + высота глаз / 1.5)
         double diffX = target.getX() - mc.player.getX();
-        double diffY = (target.getY() + target.getEyeHeight(target.getPose()) / 1.5) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        // Наводка в область груди/головы (Y + высота глаз * 0.8)
+        double diffY = (target.getY() + target.getEyeHeight(target.getPose()) * 0.8) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffZ = target.getZ() - mc.player.getZ();
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 

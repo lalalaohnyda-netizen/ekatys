@@ -16,15 +16,15 @@ public abstract class RotationMixin {
         Killaura.onTick();
     }
 
-    // Подменяем Yaw ПРЯМО ПЕРЕД отправкой пакета на сервер
-    @Redirect(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getYaw()F"))
+    // Подменяем Yaw ПРЯМО ПЕРЕД отправкой пакета, обращаясь к полю напрямую
+    @Redirect(method = "sendMovementPackets", at = @At(value = "FIELD", target = "Lnet/minecraft/client/network/ClientPlayerEntity;yaw:F", opcode = 180)) // 180 = GETFIELD
     private float redirectYaw(ClientPlayerEntity player) {
-        return Killaura.isRotating ? Killaura.serverYaw : player.getYaw();
+        return Killaura.isRotating ? Killaura.serverYaw : player.yaw;
     }
 
-    // Подменяем Pitch ПРЯМО ПЕРЕД отправкой пакета на сервер
-    @Redirect(method = "sendMovementPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;getPitch()F"))
+    // Подменяем Pitch ПРЯМО ПЕРЕД отправкой пакета
+    @Redirect(method = "sendMovementPackets", at = @At(value = "FIELD", target = "Lnet/minecraft/client/network/ClientPlayerEntity;pitch:F", opcode = 180))
     private float redirectPitch(ClientPlayerEntity player) {
-        return Killaura.isRotating ? Killaura.serverPitch : player.getPitch();
+        return Killaura.isRotating ? Killaura.serverPitch : player.pitch;
     }
 }

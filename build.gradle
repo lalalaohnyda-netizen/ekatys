@@ -1,10 +1,21 @@
+pluginManagement {
+    repositories {
+        maven { url "https://maven.fabricmc.net/" }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 plugins {
-	id 'net.fabricmc.fabric-loom' version '0.10-SNAPSHOT' // Стабильная версия Loom для 1.16.5
-	id 'maven-publish'
+    id 'net.fabricmc.fabric-loom' version '0.10-SNAPSHOT'
+    id 'maven-publish'
 }
 
 sourceCompatibility = JavaVersion.VERSION_16
 targetCompatibility = JavaVersion.VERSION_16
+
+// Остальной код из предыдущего совета (dependencies и т.д.) оставляй ниже
+
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version

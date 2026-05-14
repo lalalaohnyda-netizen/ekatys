@@ -20,13 +20,13 @@ public class Killaura {
     public static void onTick() {
         if (!enabled || mc.player == null) return;
 
-        // Жесткий автоспринт (пакетный)
+        // Железобетонный автоспринт
         if (mc.player.forwardSpeed > 0 && !mc.player.isSneaking()) {
             mc.player.setSprinting(true);
         }
 
-        // Фиксация цели: если текущая цель жива и рядом — не меняем её
-        if (target == null || !target.isAlive() || mc.player.distanceTo(target) > 4.0) {
+        // Логика Target Focus: держим цель до последнего
+        if (target == null || !target.isAlive() || mc.player.distanceTo(target) > 3.8) {
             target = findTarget();
         }
 
@@ -34,13 +34,15 @@ public class Killaura {
             updateRotation();
             isRotating = true;
             
-            // Удар (крит-тайминг)
-            if (mc.player.getAttackCooldownProgress(0.0f) >= 0.95f) {
-                if (mc.player.fallDistance > 0.05f) {
+            // Криты + Bypass тайминг
+            if (mc.player.getAttackCooldownProgress(0.0f) >= 0.93f) {
+                if (mc.player.fallDistance > 0.08f || mc.player.abilities.creativeMode) {
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
             }
+            // Визуал: заставляем цель светиться
+            target.setGlowing(true);
         } else {
             isRotating = false;
         }
@@ -51,24 +53,22 @@ public class Killaura {
         
         double diffX = target.getX() - mc.player.getX();
         double diffZ = target.getZ() - mc.player.getZ();
-        double diffY = (target.getY() + target.getHeight() * 0.5) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
+        // Рандомная точка на теле (анти-флаг)
+        double diffY = (target.getY() + target.getHeight() * (0.45 + Math.sin(animTicks * 0.1) * 0.1)) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
         float tYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
         float tPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        // Bypass: Плавное экспоненциальное сглаживание (античит не видит резких шагов)
-        rotYaw = lerpAngle(rotYaw, tYaw, 0.2f + (float)Math.random() * 0.1f);
-        rotPitch = lerpAngle(rotPitch, tPitch, 0.2f + (float)Math.random() * 0.1f);
+        // Exponential Smoothing (плавная доводка как у человека)
+        rotYaw = rotYaw + MathHelper.wrapDegrees(tYaw - rotYaw) * 0.3f;
+        rotPitch = rotPitch + (tPitch - rotPitch) * 0.3f;
 
-        // Накладываем микро-движения (Noise)
-        rotYaw += Math.sin(animTicks * 0.2) * 0.5;
-        rotPitch += Math.cos(animTicks * 0.2) * 0.5;
-    }
-
-    private static float lerpAngle(float from, float to, float pct) {
-        float d = MathHelper.wrapDegrees(to - from);
-        return from + d * pct;
+        // GCD Фикс (Mouse Sensitivity Bypass)
+        float f = (float) (mc.options.mouseSensitivity * 0.6F + 0.2F);
+        float gcd = f * f * f * 1.2F;
+        rotYaw -= (rotYaw - mc.player.yaw) % gcd;
+        rotPitch -= (rotPitch - mc.player.pitch) % gcd;
     }
 
     private static LivingEntity findTarget() {

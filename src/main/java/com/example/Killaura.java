@@ -18,14 +18,17 @@ public class Killaura {
     private static float animTicks = 0;
 
     public static void onTick() {
-    if (mc.player != null && mc.player.forwardSpeed > 0 && !mc.player.isSneaking()) {
-        mc.player.setSprinting(true);
-    }
-    // ... остальной код киллауры
-}
+        if (!enabled || mc.player == null || mc.world == null) {
+            isRotating = false;
+            return;
+        }
 
+        // --- ЖЕЛЕЗНЫЙ АВТОСПРИНТ ---
+        if (mc.player.forwardSpeed > 0 && !mc.player.isSneaking() && !mc.player.horizontalCollision) {
+            mc.player.setSprinting(true);
+        }
 
-        // Логика Target Focus: держим цель до последнего
+        // --- ФИКСАЦИЯ ЦЕЛИ (Target Focus) ---
         if (target == null || !target.isAlive() || mc.player.distanceTo(target) > 3.8) {
             target = findTarget();
         }
@@ -34,14 +37,14 @@ public class Killaura {
             updateRotation();
             isRotating = true;
             
-            // Криты + Bypass тайминг
+            // Криты + Тайминг удара
             if (mc.player.getAttackCooldownProgress(0.0f) >= 0.93f) {
                 if (mc.player.fallDistance > 0.08f || mc.player.abilities.creativeMode) {
                     mc.interactionManager.attackEntity(mc.player, target);
                     mc.player.swingHand(Hand.MAIN_HAND);
                 }
             }
-            // Визуал: заставляем цель светиться
+            // Визуал (свечение)
             target.setGlowing(true);
         } else {
             isRotating = false;
@@ -53,18 +56,18 @@ public class Killaura {
         
         double diffX = target.getX() - mc.player.getX();
         double diffZ = target.getZ() - mc.player.getZ();
-        // Рандомная точка на теле (анти-флаг)
+        // Рандомная точка (анти-флаг)
         double diffY = (target.getY() + target.getHeight() * (0.45 + Math.sin(animTicks * 0.1) * 0.1)) - (mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()));
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
 
         float tYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
         float tPitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        // Exponential Smoothing (плавная доводка как у человека)
+        // Плавная доводка (Lerp)
         rotYaw = rotYaw + MathHelper.wrapDegrees(tYaw - rotYaw) * 0.3f;
         rotPitch = rotPitch + (tPitch - rotPitch) * 0.3f;
 
-        // GCD Фикс (Mouse Sensitivity Bypass)
+        // GCD Фикс
         float f = (float) (mc.options.mouseSensitivity * 0.6F + 0.2F);
         float gcd = f * f * f * 1.2F;
         rotYaw -= (rotYaw - mc.player.yaw) % gcd;
@@ -74,6 +77,8 @@ public class Killaura {
     private static LivingEntity findTarget() {
         return mc.world.getEntitiesByClass(PlayerEntity.class, mc.player.getBoundingBox().expand(3.8), 
             e -> e != mc.player && e.isAlive())
-            .stream().min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+            .stream()
+            .min(Comparator.comparingDouble(mc.player::distanceTo))
+            .orElse(null);
     }
 }

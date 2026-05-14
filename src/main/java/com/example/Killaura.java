@@ -18,12 +18,12 @@ public class Killaura {
     private static float animTicks = 0;
 
     public static void onTick() {
-        if (!enabled || mc.player == null) return;
+    if (mc.player != null && mc.player.forwardSpeed > 0 && !mc.player.isSneaking()) {
+        mc.player.setSprinting(true);
+    }
+    // ... остальной код киллауры
+}
 
-        // Железобетонный автоспринт
-        if (mc.player.forwardSpeed > 0 && !mc.player.isSneaking()) {
-            mc.player.setSprinting(true);
-        }
 
         // Логика Target Focus: держим цель до последнего
         if (target == null || !target.isAlive() || mc.player.distanceTo(target) > 3.8) {

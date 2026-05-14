@@ -4,8 +4,7 @@
   "package": "com.example.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "RotationMixin",
-    "InputMixin"
+  "ekatys.mixins.json"
 ],
   "client": [
   ],

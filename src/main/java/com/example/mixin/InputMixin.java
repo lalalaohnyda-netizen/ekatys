@@ -8,10 +8,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(ClientPlayerEntity.class)
-public class InventoryMoveMixin {
+public class InputMixin {
     @Redirect(method = "tickMovement", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;currentScreen:Lnet/minecraft/client/gui/screen/Screen;"))
     private net.minecraft.client.gui.screen.Screen stopInventoryStop(MinecraftClient client) {
-        // Если открыт чат — стопим движение. Если инвентарь — делаем вид, что ничего не открыто.
+        // Позволяет ходить в инвентаре, но стопит в чате
         if (client.currentScreen instanceof ChatScreen) return client.currentScreen;
         return null; 
     }

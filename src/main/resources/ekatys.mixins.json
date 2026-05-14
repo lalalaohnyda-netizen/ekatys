@@ -4,8 +4,9 @@
   "package": "com.example.mixin",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
-    "RotationMixin"
-  ],
+    "RotationMixin",
+    "InputMixin"
+],
   "client": [
   ],
   "injectors": {
